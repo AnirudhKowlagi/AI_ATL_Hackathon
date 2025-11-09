@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>A-Frame Car Driving Scene - Surface Physics</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+    <style>
+      body { margin: 0; background-color: black; }
+      #carSelector {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px 25px;
+        border-radius: 10px;
+        display: flex;
+        gap: 15px;
+      }
+      .car-button {
+        background: #333;
+        color: white;
+        border: 2px solid #666;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s;
+      }
+      .car-button:hover {
+        background: #555;
+        border-color: #888;
+      }
+      .car-button.active {
+        background: #1e90ff;
+        border-color: #1e90ff;
+      }
+      .dropdown-select {
+        background: #333;
+        color: white;
+        border: 2px solid #666;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        transition: all 0.3s;
+        outline: none;
+        }
+        .dropdown-select:hover {
+        background: #555;
+        border-color: #888;
+        }
+        .dropdown-select:focus {
+        border-color: #ff8c00;
+        }
+
+      #speedometer {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.85);
+        padding: 20px;
+        border-radius: 15px;
+        border: 3px solid #1e90ff;
+        min-width: 180px;
+        text-align: center;
+        font-family: 'Arial', sans-serif;
+      }
+      #vehicleStats {
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.85);
+        padding: 20px;
+        border-radius: 15px;
+        border: 3px solid #ff8c00;
+        min-width: 250px;
+        font-family: 'Arial', sans-serif;
+        color: white;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 10px 0;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .stat-row:last-child {
+        border-bottom: none;
+      }
+      .stat-label {
+        font-size: 14px;
+        color: #aaa;
+        font-weight: bold;
+      }
+      .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #00ff00;
+        text-shadow: 0 0 5px #00ff00;
+      }
+      .stat-value.warning {
+        color: #ffff00;
+        text-shadow: 0 0 5px #ffff00;
+      }
+      .stat-value.critical {
+        color: #ff0000;
+        text-shadow: 0 0 5px #ff0000;
+      }
+      #statsTitle {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 15px;
+        color: #ff8c00;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .stat-dropdown {
+        background: #1a1a1a;
+        color: #00ff00;
+        border: 2px solid #00ff00;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        text-shadow: 0 0 5px #00ff00;
+        outline: none;
+        transition: all 0.3s;
+      }
+      .stat-dropdown:hover {
+        background: #2a2a2a;
+        border-color: #00ff33;
+      }
+      .stat-dropdown:focus {
+        border-color: #00ff88;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      }
+      .stat-dropdown option {
+        background: #1a1a1a;
+        color: #00ff00;
+      }
+      .tire-age-container {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .tire-age-slider {
+        width: 100%;
+        height: 6px;
+        background: #333;
+        outline: none;
+        border-radius: 3px;
+        -webkit-appearance: none;
+      }
+      .tire-age-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: #00ff00;
+        cursor: pointer;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #00ff00;
+      }
+      .tire-age-slider::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        background: #00ff00;
+        cursor: pointer;
+        border-radius: 50%;
+        border: none;
+        box-shadow: 0 0 5px #00ff00;
+      }
+      .tire-age-display {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #888;
+      }
+      #speedValue {
+        font-size: 48px;
+        font-weight: bold;
+        color: #00ff00;
+        text-shadow: 0 0 10px #00ff00;
+        margin: 0;
+      }
+      #speedUnit {
+        font-size: 18px;
+        color: #fff;
+        margin: 5px 0;
+      }
+      #speedBar {
+        width: 100%;
+        height: 8px;
+        background: #333;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 10px;
+      }
+      #speedBarFill {
+        height: 100%;
+        background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+        width: 0%;
+        transition: width 0.1s;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="carSelector">
+      <button class="car-button active" onclick="switchCar('sedan')">Sedan</button>
+      <button class="car-button" onclick="switchCar('suv')">SUV</button>
+      <button class="car-button" onclick="switchCar('truck')">Pickup</button>
+    </div>
+
+    <div id="speedometer">
+      <div id="speedValue">0</div>
+      <div id="speedUnit">MPH</div>
+      <div id="speedBar">
+        <div id="speedBarFill"></div>
+      </div>
+    </div>
+    
+    <div id="vehicleStats">
+      <div id="statsTitle">Vehicle Stats</div>
+      <div class="stat-row">
+        <span class="stat-label">Surface:</span>
+        <select id="surfaceDisplay" class="stat-dropdown" onchange="setSurface(this.value)">
+          <option value="asphalt">Asphalt</option>
+          <option value="concrete">Concrete</option>
+          <option value="unpaved">Unpaved</option>
+        </select>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Drag Coeff:</span>
+        <span class="stat-value" id="dragCoeff">0.30</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Drivetrain:</span>
+        <select id="drivetrainDisplay" class="stat-dropdown" onchange="setDrivetrain(this.value)">
+          <option value="fwd">FWD</option>
+          <option value="rwd">RWD</option>
+          <option value="awd">AWD</option>
+          <option value="4wd">4WD</option>
+        </select>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Total Grip:</span>
+        <span class="stat-value" id="frictionValue">0.95</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Tires:</span>
+        <select id="tiresDisplay" class="stat-dropdown" onchange="setTires(this.value)">
+          <option value="winter">Winter</option>
+          <option value="all-season">All-Season</option>
+          <option value="summer">Summer</option>
+        </select>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Tire Age:</span>
+        <div class="tire-age-container">
+          <input type="range" id="tireAgeSlider" class="tire-age-slider" min="0" max="10" value="0" step="0.5" oninput="setTireAge(this.value)">
+          <div class="tire-age-display">
+            <span>New</span>
+            <span id="tireAgeValue" class="stat-value">0 yrs</span>
+            <span>Old</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <a-scene background="color: #87CEEB">
+      <a-entity id="cameraRig" position="0 1.6 5">
+        <a-entity camera look-controls></a-entity>
+      </a-entity>
+      
+      <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+      <a-entity light="type: directional; intensity: 0.8" position="5 10 5"></a-entity>
+      
+
+      <a-sky color="#87CEEB"></a-sky>
+      
+      <a-plane position="0 -0.1 0" rotation="-90 0 0" width="150" height="300" color="#4a7c3a"></a-plane>
+      
+
+      <a-entity id="track">
+        <a-box id="road1" position="0 0 -10" width="8" height="0.1" depth="40" color="#333"></a-box>
+        <a-box id="road2" position="0 0 -50" width="8" height="0.1" depth="40" color="#333"></a-box>
+        <a-box id="road3" position="0 0 -90" width="8" height="0.1" depth="40" color="#333"></a-box>
+        
+        <a-box position="0 0.06 0" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -6" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -12" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -18" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -24" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -30" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -36" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -42" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -48" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -54" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -60" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -66" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -72" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -78" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -84" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -90" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -96" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        <a-box position="0 0.06 -102" width="0.2" height="0.02" depth="3" color="#ffff00"></a-box>
+        
+        <a-box position="4.2 0.06 -55" width="0.25" height="0.02" depth="130" color="#ffffff"></a-box>
+        <a-box position="-4.2 0.06 -55" width="0.25" height="0.02" depth="130" color="#ffffff"></a-box>
+      </a-entity>
+      
+      <a-entity id="mountains">
+        <a-cone position="-40 5 -80" radius-bottom="20" radius-top="1" height="30" color="#5a5a5a"></a-cone>
+        <a-cone position="-50 4 -100" radius-bottom="18" radius-top="1" height="25" color="#6a6a6a"></a-cone>
+        <a-cone position="-30 6 -120" radius-bottom="22" radius-top="1" height="35" color="#555555"></a-cone>
+        
+
+        <a-cone position="40 5 -80" radius-bottom="20" radius-top="1" height="30" color="#5a5a5a"></a-cone>
+        <a-cone position="50 4 -100" radius-bottom="18" radius-top="1" height="25" color="#6a6a6a"></a-cone>
+        <a-cone position="35 7 -120" radius-bottom="25" radius-top="1" height="38" color="#555555"></a-cone>
+        
+        <a-cone position="0 8 -150" radius-bottom="30" radius-top="1" height="45" color="#4a4a4a"></a-cone>
+        <a-cone position="-20 7 -160" radius-bottom="28" radius-top="1" height="40" color="#505050"></a-cone>
+        <a-cone position="25 6 -170" radius-bottom="26" radius-top="1" height="38" color="#555555"></a-cone>
+      </a-entity>
+
+      <a-entity id="trees-left">
+        <a-entity position="-8 0 5">
+          <a-cylinder color="#654321" radius="0.3" height="4"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3 0" radius-bottom="1.5" radius-top="0.2" height="3"></a-cone>
+          <a-cone color="#355c1f" position="0 4.5 0" radius-bottom="1.2" radius-top="0.1" height="2.5"></a-cone>
+          <a-cone color="#3d6b23" position="0 5.5 0" radius-bottom="0.9" radius-top="0.1" height="2"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-9 0 -5">
+          <a-cylinder color="#654321" radius="0.28" height="3.5"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.5 0" radius-bottom="1.3" radius-top="0.2" height="2.8"></a-cone>
+          <a-cone color="#355c1f" position="0 3.8 0" radius-bottom="1" radius-top="0.1" height="2.2"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-7.5 0 -15">
+          <a-cylinder color="#654321" radius="0.32" height="4.2"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3.2 0" radius-bottom="1.6" radius-top="0.2" height="3.2"></a-cone>
+          <a-cone color="#355c1f" position="0 4.8 0" radius-bottom="1.3" radius-top="0.1" height="2.6"></a-cone>
+          <a-cone color="#3d6b23" position="0 5.9 0" radius-bottom="1" radius-top="0.1" height="2.1"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-8.5 0 -25">
+          <a-cylinder color="#654321" radius="0.3" height="3.8"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.8 0" radius-bottom="1.4" radius-top="0.2" height="2.9"></a-cone>
+          <a-cone color="#355c1f" position="0 4.1 0" radius-bottom="1.1" radius-top="0.1" height="2.3"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-7 0 -35">
+          <a-cylinder color="#654321" radius="0.29" height="3.6"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.6 0" radius-bottom="1.35" radius-top="0.2" height="2.7"></a-cone>
+          <a-cone color="#355c1f" position="0 3.9 0" radius-bottom="1.05" radius-top="0.1" height="2.1"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-8 0 -45">
+          <a-cylinder color="#654321" radius="0.31" height="4"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3 0" radius-bottom="1.5" radius-top="0.2" height="3"></a-cone>
+          <a-cone color="#355c1f" position="0 4.5 0" radius-bottom="1.2" radius-top="0.1" height="2.5"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-9 0 -55">
+          <a-cylinder color="#654321" radius="0.3" height="3.7"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.7 0" radius-bottom="1.4" radius-top="0.2" height="2.8"></a-cone>
+          <a-cone color="#355c1f" position="0 4 0" radius-bottom="1.1" radius-top="0.1" height="2.2"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-7.5 0 -65">
+          <a-cylinder color="#654321" radius="0.32" height="4.1"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3.1 0" radius-bottom="1.55" radius-top="0.2" height="3.1"></a-cone>
+          <a-cone color="#355c1f" position="0 4.7 0" radius-bottom="1.25" radius-top="0.1" height="2.5"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-8.5 0 -75">
+          <a-cylinder color="#654321" radius="0.3" height="3.9"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.9 0" radius-bottom="1.45" radius-top="0.2" height="2.95"></a-cone>
+          <a-cone color="#355c1f" position="0 4.3 0" radius-bottom="1.15" radius-top="0.1" height="2.4"></a-cone>
+        </a-entity>
+        
+        <a-entity position="-7 0 -85">
+          <a-cylinder color="#654321" radius="0.3" height="4"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3 0" radius-bottom="1.5" radius-top="0.2" height="3"></a-cone>
+          <a-cone color="#355c1f" position="0 4.5 0" radius-bottom="1.2" radius-top="0.1" height="2.5"></a-cone>
+        </a-entity>
+      </a-entity>
+      
+      <a-entity id="trees-right">
+        <a-entity position="8 0 0">
+          <a-cylinder color="#654321" radius="0.3" height="3.8"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.8 0" radius-bottom="1.4" radius-top="0.2" height="2.9"></a-cone>
+          <a-cone color="#355c1f" position="0 4.1 0" radius-bottom="1.1" radius-top="0.1" height="2.3"></a-cone>
+        </a-entity>
+        
+        <a-entity position="9 0 -10">
+          <a-cylinder color="#654321" radius="0.32" height="4.2"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3.2 0" radius-bottom="1.6" radius-top="0.2" height="3.2"></a-cone>
+          <a-cone color="#355c1f" position="0 4.8 0" radius-bottom="1.3" radius-top="0.1" height="2.6"></a-cone>
+        </a-entity>
+        
+        <a-entity position="7.5 0 -20">
+          <a-cylinder color="#654321" radius="0.29" height="3.6"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.6 0" radius-bottom="1.35" radius-top="0.2" height="2.7"></a-cone>
+          <a-cone color="#355c1f" position="0 3.9 0" radius-bottom="1.05" radius-top="0.1" height="2.1"></a-cone>
+        </a-entity>
+        
+        <a-entity position="8.5 0 -30">
+          <a-cylinder color="#654321" radius="0.31" height="4"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3 0" radius-bottom="1.5" radius-top="0.2" height="3"></a-cone>
+          <a-cone color="#355c1f" position="0 4.5 0" radius-bottom="1.2" radius-top="0.1" height="2.5"></a-cone>
+        </a-entity>
+        
+        <a-entity position="9 0 -40">
+          <a-cylinder color="#654321" radius="0.3" height="3.7"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.7 0" radius-bottom="1.4" radius-top="0.2" height="2.8"></a-cone>
+          <a-cone color="#355c1f" position="0 4 0" radius-bottom="1.1" radius-top="0.1" height="2.2"></a-cone>
+        </a-entity>
+        
+        <a-entity position="7 0 -50">
+          <a-cylinder color="#654321" radius="0.32" height="4.1"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3.1 0" radius-bottom="1.55" radius-top="0.2" height="3.1"></a-cone>
+          <a-cone color="#355c1f" position="0 4.7 0" radius-bottom="1.25" radius-top="0.1" height="2.5"></a-cone>
+        </a-entity>
+        
+        <a-entity position="8.5 0 -60">
+          <a-cylinder color="#654321" radius="0.3" height="3.9"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.9 0" radius-bottom="1.45" radius-top="0.2" height="2.95"></a-cone>
+          <a-cone color="#355c1f" position="0 4.3 0" radius-bottom="1.15" radius-top="0.1" height="2.4"></a-cone>
+        </a-entity>
+        
+        <a-entity position="9 0 -70">
+          <a-cylinder color="#654321" radius="0.3" height="4"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3 0" radius-bottom="1.5" radius-top="0.2" height="3"></a-cone>
+          <a-cone color="#355c1f" position="0 4.5 0" radius-bottom="1.2" radius-top="0.1" height="2.5"></a-cone>
+        </a-entity>
+        
+        <a-entity position="7.5 0 -80">
+          <a-cylinder color="#654321" radius="0.31" height="3.8"></a-cylinder>
+          <a-cone color="#2d5016" position="0 2.8 0" radius-bottom="1.4" radius-top="0.2" height="2.9"></a-cone>
+          <a-cone color="#355c1f" position="0 4.1 0" radius-bottom="1.1" radius-top="0.1" height="2.3"></a-cone>
+        </a-entity>
+        
+        <a-entity position="8 0 -90">
+          <a-cylinder color="#654321" radius="0.3" height="4"></a-cylinder>
+          <a-cone color="#2d5016" position="0 3 0" radius-bottom="1.5" radius-top="0.2" height="3"></a-cone>
+          <a-cone color="#355c1f" position="0 4.5 0" radius-bottom="1.2" radius-top="0.1" height="2.5"></a-cone>
+        </a-entity>
+      </a-entity>
+      
+      <a-sphere position="-6 0.4 -8" radius="0.6" color="#2d5016"></a-sphere>
+      <a-sphere position="-6.3 0.35 -8.2" radius="0.5" color="#355c1f"></a-sphere>
+      
+      <a-sphere position="6 0.4 -18" radius="0.6" color="#2d5016"></a-sphere>
+      <a-sphere position="6.3 0.35 -18.2" radius="0.5" color="#355c1f"></a-sphere>
+      
+      <a-sphere position="-5.5 0.4 -38" radius="0.6" color="#2d5016"></a-sphere>
+      <a-sphere position="-5.8 0.35 -38.2" radius="0.5" color="#355c1f"></a-sphere>
+      
+      <a-sphere position="5.8 0.4 -58" radius="0.6" color="#2d5016"></a-sphere>
+      <a-sphere position="6.1 0.35 -58.2" radius="0.5" color="#355c1f"></a-sphere>
+      
+      <a-sphere position="-6.2 0.4 -78" radius="0.6" color="#2d5016"></a-sphere>
+      <a-sphere position="-6.5 0.35 -78.2" radius="0.5" color="#355c1f"></a-sphere>
+      
+      <a-entity id="sedan" class="car-model" position="0 0.75 0" rotation="0 0 0" 
+        car-controls
+        shadow
+        visible="true">
+        <a-box color="#1e90ff" width="1.2" height="0.5" depth="2.4" position="0 0 0"></a-box>
+        <a-box color="#0066cc" width="1" height="0.6" depth="1.2" position="0 0.5 -0.2"></a-box>
+        <a-box color="#1e90ff" width="1.15" height="0.35" depth="0.8" position="0 0.075 0.9"></a-box>
+        <a-box color="#87ceeb" opacity="0.6" width="1.02" height="0.5" depth="0.1" position="0 0.5 0.5"></a-box>
+        <a-box color="#87ceeb" opacity="0.6" width="1.02" height="0.5" depth="0.1" position="0 0.5 -0.9"></a-box>
+        <a-box color="#87ceeb" opacity="0.6" width="0.05" height="0.4" depth="0.8" position="0.52 0.5 -0.2"></a-box>
+        <a-box color="#87ceeb" opacity="0.6" width="0.05" height="0.4" depth="0.8" position="-0.52 0.5 -0.2"></a-box>
+        <a-cylinder class="wheel wheel-front-right" color="#1a1a1a" radius="0.25" height="0.15" rotation="0 0 90" position="0.65 -0.3 0.8"></a-cylinder>
+        <a-cylinder class="wheel wheel-front-left" color="#1a1a1a" radius="0.25" height="0.15" rotation="0 0 90" position="-0.65 -0.3 0.8"></a-cylinder>
+        <a-cylinder class="wheel wheel-back-right" color="#1a1a1a" radius="0.25" height="0.15" rotation="0 0 90" position="0.65 -0.3 -0.8"></a-cylinder>
+        <a-cylinder class="wheel wheel-back-left" color="#1a1a1a" radius="0.25" height="0.15" rotation="0 0 90" position="-0.65 -0.3 -0.8"></a-cylinder>
+        <a-cylinder color="#666" radius="0.15" height="0.16" rotation="0 0 90" position="0.66 -0.3 0.8"></a-cylinder>
+        <a-cylinder color="#666" radius="0.15" height="0.16" rotation="0 0 90" position="-0.66 -0.3 0.8"></a-cylinder>
+        <a-cylinder color="#666" radius="0.15" height="0.16" rotation="0 0 90" position="0.66 -0.3 -0.8"></a-cylinder>
+        <a-cylinder color="#666" radius="0.15" height="0.16" rotation="0 0 90" position="-0.66 -0.3 -0.8"></a-cylinder>
+        <a-box color="#ffffe0" width="0.25" height="0.15" depth="0.05" position="0.4 0.05 1.31"></a-box>
+        <a-box color="#ffffe0" width="0.25" height="0.15" depth="0.05" position="-0.4 0.05 1.31"></a-box>
+        <a-box color="#ff0000" width="0.25" height="0.15" depth="0.05" position="0.4 0 -1.21"></a-box>
+        <a-box color="#ff0000" width="0.25" height="0.15" depth="0.05" position="-0.4 0 -1.21"></a-box>
+        <a-box color="#333" width="0.8" height="0.2" depth="0.05" position="0 -0.05 1.31"></a-box>
+        <a-box color="#1e90ff" width="1.2" height="0.15" depth="0.15" position="0 -0.2 1.35"></a-box>
+      </a-entity>
+
+
+      <a-entity id="suv" class="car-model" position="0 0.75 0" rotation="0 0 0" 
+        car-controls
+        shadow
+        visible="false">
+        <a-box color="#2C3539" width="1.4" height="0.8" depth="2.6" position="0 0.2 0"></a-box>
+
+        <a-box color="#1a1a1a" width="1.3" height="0.8" depth="1.6" position="0 0.8 -0.1"></a-box>
+
+        <a-box color="#242A2E" width="1.35" height="0.45" depth="0.95" position="0 0.225 1.025"></a-box>
+
+        <a-box color="#87ceeb" opacity="0.6" width="1.32" height="0.7" depth="0.1" position="0 0.8 0.7"></a-box>
+        <a-box color="#87ceeb" opacity="0.6" width="1.32" height="0.7" depth="0.1" position="0 0.8 -0.95"></a-box>
+
+        <a-box color="#87ceeb" opacity="0.6" width="0.05" height="0.6" depth="1.2" position="0.67 0.8 -0.1"></a-box>
+        <a-box color="#87ceeb" opacity="0.6" width="0.05" height="0.6" depth="1.2" position="-0.67 0.8 -0.1"></a-box>
+
+        <a-cylinder class="wheel wheel-front-right" color="#1a1a1a" radius="0.35" height="0.2" rotation="0 0 90" position="0.75 -0.2 0.9"></a-cylinder>
+        <a-cylinder class="wheel wheel-front-left" color="#1a1a1a" radius="0.35" height="0.2" rotation="0 0 90" position="-0.75 -0.2 0.9"></a-cylinder>
+        <a-cylinder class="wheel wheel-back-right" color="#1a1a1a" radius="0.35" height="0.2" rotation="0 0 90" position="0.75 -0.2 -0.9"></a-cylinder>
+        <a-cylinder class="wheel wheel-back-left" color="#1a1a1a" radius="0.35" height="0.2" rotation="0 0 90" position="-0.75 -0.2 -0.9"></a-cylinder>
+
+        <a-cylinder color="#666" radius="0.22" height="0.21" rotation="0 0 90" position="0.76 -0.2 0.9"></a-cylinder>
+        <a-cylinder color="#666" radius="0.22" height="0.21" rotation="0 0 90" position="-0.76 -0.2 0.9"></a-cylinder>
+        <a-cylinder color="#666" radius="0.22" height="0.21" rotation="0 0 90" position="0.76 -0.2 -0.9"></a-cylinder>
+        <a-cylinder color="#666" radius="0.22" height="0.21" rotation="0 0 90" position="-0.76 -0.2 -0.9"></a-cylinder>
+
+        <a-box color="#ffffe0" width="0.3" height="0.2" depth="0.05" position="0.45 0.15 1.53"></a-box>
+        <a-box color="#ffffe0" width="0.3" height="0.2" depth="0.05" position="-0.45 0.15 1.53"></a-box>
+
+        <a-box color="#ff0000" width="0.3" height="0.2" depth="0.05" position="0.45 0.3 -1.31"></a-box>
+        <a-box color="#ff0000" width="0.3" height="0.2" depth="0.05" position="-0.45 0.3 -1.31"></a-box>
+
+        <a-box color="#333" width="1" height="0.3" depth="0.05" position="0 0.05 1.53"></a-box>
+
+        <a-box color="#242A2E" width="1.4" height="0.2" depth="0.2" position="0 -0.15 1.58"></a-box>
+
+        <a-box color="#333" width="1.2" height="0.05" depth="1.2" position="0 1.22 -0.1"></a-box>
+      </a-entity>
+
+<a-entity id="truck" class="car-model" position="0 0.75 0" rotation="0 0 0" 
+  car-controls
+  shadow
+  visible="false">
+
+  <a-box color="#3D4F5C" width="1.4" height="0.9" depth="1.4" position="0 0.4 -0.3"></a-box>
+
+  <a-box color="#2B3A45" width="1.3" height="0.3" depth="1.2" position="0 0.85 -0.3"></a-box>
+
+  <a-box color="#3D4F5C" width="1.3" height="0.5" depth="1" position="0 0.2 0.9"></a-box>
+
+  <a-box color="#3D4F5C" width="1.4" height="0.4" depth="1.8" position="0 0.3 -1.6"></a-box>
+
+  <a-box color="#3D4F5C" width="1.42" height="0.4" depth="0.1" position="0 0.5 -0.7"></a-box>
+  <a-box color="#3D4F5C" width="1.42" height="0.4" depth="0.1" position="0 0.5 -2.5"></a-box>
+  <a-box color="#3D4F5C" width="0.1" height="0.4" depth="1.8" position="0.71 0.5 -1.6"></a-box>
+  <a-box color="#3D4F5C" width="0.1" height="0.4" depth="1.8" position="-0.71 0.5 -1.6"></a-box>
+
+  <a-box color="#333" opacity="0.6" width="1.32" height="0.7" depth="0.1" position="0 0.5 0.3"></a-box>
+  <a-box color="#333" opacity="0.6" width="1.32" height="0.7" depth="0.1" position="0 0.5 -1.05"></a-box>
+
+  <a-box color="#333" opacity="0.6" width="0.05" height="0.6" depth="0.8" position="0.72 0.5 -0.3"></a-box>
+  <a-box color="#333" opacity="0.6" width="0.05" height="0.6" depth="0.8" position="-0.72 0.5 -0.3"></a-box>
+
+  <a-cylinder class="wheel wheel-front-right" color="#1a1a1a" radius="0.38" height="0.25" rotation="0 0 90" position="0.8 -0.25 0.8"></a-cylinder>
+  <a-cylinder class="wheel wheel-front-left" color="#1a1a1a" radius="0.38" height="0.25" rotation="0 0 90" position="-0.8 -0.25 0.8"></a-cylinder>
+  <a-cylinder class="wheel wheel-back-right" color="#1a1a1a" radius="0.38" height="0.25" rotation="0 0 90" position="0.8 -0.25 -1.8"></a-cylinder>
+  <a-cylinder class="wheel wheel-back-left" color="#1a1a1a" radius="0.38" height="0.25" rotation="0 0 90" position="-0.8 -0.25 -1.8"></a-cylinder>
+
+  <a-cylinder color="#666" radius="0.25" height="0.26" rotation="0 0 90" position="0.81 -0.25 0.8"></a-cylinder>
+  <a-cylinder color="#666" radius="0.25" height="0.26" rotation="0 0 90" position="-0.81 -0.25 0.8"></a-cylinder>
+  <a-cylinder color="#666" radius="0.25" height="0.26" rotation="0 0 90" position="0.81 -0.25 -1.8"></a-cylinder>
+  <a-cylinder color="#666" radius="0.25" height="0.26" rotation="0 0 90" position="-0.81 -0.25 -1.8"></a-cylinder>
+
+  <a-box color="#ffffe0" width="0.3" height="0.2" depth="0.05" position="0.45 0.1 1.41"></a-box>
+  <a-box color="#ffffe0" width="0.3" height="0.2" depth="0.05" position="-0.45 0.1 1.41"></a-box>
+
+  <a-box color="#ff0000" width="0.25" height="0.15" depth="0.05" position="0.5 0.3 -2.51"></a-box>
+  <a-box color="#ff0000" width="0.25" height="0.15" depth="0.05" position="-0.5 0.3 -2.51"></a-box>
+
+  <a-box color="#333" width="1.1" height="0.35" depth="0.05" position="0 0 1.41"></a-box>
+</a-entity>
+
+      
+      <script>
+        AFRAME.registerComponent('car-controls', {
+          schema: { 
+            speed: {type: 'number', default: 0.1}, 
+            rotationSpeed: {type: 'number', default: 0.7} 
+          },
+          init: function () {
+            this.direction = new THREE.Vector3();
+            this.rotationY = 180;
+            this.keys = {};
+            this.velocity = 0;
+            this.currentSpeed = 0;
+            this.displaySpeed = 0;
+            this.drivetrain = 'fwd';
+            this.tires = 'all-season';
+            this.surface = 'asphalt';
+            this.tireAge = 0;
+            this.drift = 0;
+            this.lastRotation = 180;
+            this.steeringAngle = 0;
+            this.isBraking = false;
+            
+            this.dragCoefficient = 0.30;
+            this.weight = 3500;
+            
+            window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
+            window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
+            
+            window.currentCar = this;
+            this.updateWheelColors();
+            this.setVehicleProperties();
+          },
+          tick: function (time, deltaTime) {
+            const el = this.el;
+            
+            if (!el.getAttribute('visible')) return;
+            
+            const dt = deltaTime / 16;
+            
+            const tireGrip = this.getTireGrip();
+            const drivetrainProps = this.getDrivetrainProps();
+            const surfaceProps = this.getSurfaceProps();
+            
+            const totalTraction = tireGrip.traction * surfaceProps.frictionCoeff;
+            const totalTurning = tireGrip.turning * surfaceProps.turningMod;
+
+            const baseSpeed = this.data.speed * drivetrainProps.speedMod * surfaceProps.speedMod * dt;
+            const tireAgeRotMod = Math.max(1 - (this.tireAge * 0.025), 0.75);
+            const rotSpeed = this.data.rotationSpeed * totalTurning * dt * tireAgeRotMod;
+            
+            let steeringInput = 0;
+            if (this.keys['a']) steeringInput = 1;
+            if (this.keys['d']) steeringInput = -1;
+            
+            const steeringSmoothness = 0.15;
+            this.steeringAngle += (steeringInput - this.steeringAngle) * steeringSmoothness;
+            
+            const speedFactor = Math.min(Math.abs(this.velocity) * 10, 1);
+            
+            let actualRotSpeed = rotSpeed;
+            
+            if (this.steeringAngle !== 0 && Math.abs(this.velocity) > 0.01) {
+              const surfaceDriftMod = surfaceProps.driftMod;
+              const tireAgeFactor = 1 + (this.tireAge * 0.03);
+              
+              if (this.drivetrain === 'rwd') {
+                actualRotSpeed *= (1 + speedFactor * 0.15);
+                this.drift += this.steeringAngle * speedFactor * 0.08 * (1 - totalTraction) * surfaceDriftMod * tireAgeFactor;
+              }
+              else if (this.drivetrain === 'fwd') {
+                actualRotSpeed *= (1.02 - speedFactor * 0.08);
+                this.drift += this.steeringAngle * speedFactor * 0.04 * surfaceDriftMod * tireAgeFactor;
+              }
+              else if (this.drivetrain === 'awd') {
+                actualRotSpeed *= (1 + speedFactor * 0.03);
+                this.drift += this.steeringAngle * speedFactor * 0.025 * surfaceDriftMod * tireAgeFactor;
+              }
+              else if (this.drivetrain === '4wd') {
+                actualRotSpeed *= (0.95 + speedFactor * 0.03);
+                this.drift += this.steeringAngle * speedFactor * 0.012 * surfaceDriftMod * tireAgeFactor;
+              }
+            }
+            
+            this.rotationY += this.steeringAngle * actualRotSpeed + this.drift;
+            
+            const baseDriftDecay = 0.85 + totalTraction * 0.05;
+            const tireAgeDecayIncrease = this.tireAge * 0.008;
+            this.drift *= Math.min(baseDriftDecay + tireAgeDecayIncrease, 0.96);
+            
+            el.setAttribute('rotation', { x: 0, y: this.rotationY, z: 0 });
+
+            let targetVelocity = 0;
+            let isAccelerating = false;
+            this.isBraking = false;
+            
+            if (this.keys['s']) {
+              if (this.velocity > 0.005) {
+                this.isBraking = true;
+                const ageAdjustedBraking = Math.max(1 - (this.tireAge * 0.035), 0.65);
+                this.velocity *= (0.92 * surfaceProps.brakingMod * ageAdjustedBraking);
+              }
+              else {
+                targetVelocity = -baseSpeed * 0.8;
+                isAccelerating = true;
+              }
+            }
+            
+            if (this.keys['w']) {
+              targetVelocity = baseSpeed * drivetrainProps.acceleration * 2;
+              isAccelerating = true;
+            }
+
+            const rotationDelta = Math.abs(this.rotationY - this.lastRotation);
+            const isTurning = rotationDelta > 0.3;
+            this.lastRotation = this.rotationY;
+            
+            let turningDrag = 1.0;
+            if (isTurning && Math.abs(this.velocity) > 0.01) {
+              const turnIntensity = Math.min(rotationDelta / 2, 1);
+              turningDrag = 1 - (turnIntensity * 0.12 * speedFactor * surfaceProps.turningDrag);
+            }
+            
+            const effectiveTraction = totalTraction * drivetrainProps.traction;
+            
+            if (isAccelerating) {
+              this.velocity += (targetVelocity - this.velocity) * effectiveTraction * 0.02;
+            } else if (!this.isBraking) {
+              this.velocity *= 0.999999999999999999999;
+            }
+            
+            this.velocity *= turningDrag;
+            
+            const speedSquared = Math.abs(this.velocity) * Math.abs(this.velocity);
+            const dragForce = this.dragCoefficient * speedSquared * 0.0008;
+            if (this.velocity > 0) {
+              this.velocity -= dragForce;
+            } else if (this.velocity < 0) {
+              this.velocity += dragForce;
+            }
+            
+            const rollingResistance = surfaceProps.rollingResistance * (1 - totalTraction * 0.1);
+            this.velocity *= (1 - rollingResistance);
+            
+            if (Math.abs(this.velocity) > 0.001) {
+              const rad = THREE.MathUtils.degToRad(this.rotationY);
+              el.object3D.position.x += Math.sin(rad) * this.velocity;
+              el.object3D.position.z += Math.cos(rad) * this.velocity;
+            } else {
+              this.velocity = 0;
+            }
+            
+            this.currentSpeed = Math.abs(this.velocity) * 100;
+
+            const speedDiff = this.currentSpeed - this.displaySpeed;
+            this.displaySpeed += speedDiff * 0.2;
+            
+            this.updateSpeedometer();
+            
+            this.updateStatsDisplay();
+            
+            const cam = document.querySelector('#cameraRig');
+            const carPos = el.object3D.position;
+            cam.object3D.position.x = carPos.x;
+            cam.object3D.position.z = carPos.z + 5;
+          },
+          getTireGrip: function() {
+            const tireProperties = {
+              'summer': { traction: 0.85, turning: 0.95, label: 'Summer' },
+              'all-season': { traction: 0.95, turning: 1.0, label: 'All-Season' },
+              'winter': { traction: 1.0, turning: 1.05, label: 'Winter' }
+            };
+            
+            const baseTire = tireProperties[this.tires] || tireProperties['all-season'];
+            
+            const ageDegradation = Math.min(this.tireAge * 0.04, 0.40); 
+            const turningDegradation = Math.min(this.tireAge * 0.03, 0.30); 
+            
+            return {
+              traction: Math.max(baseTire.traction * (1 - ageDegradation), 0.45), 
+              turning: Math.max(baseTire.turning * (1 - turningDegradation), 0.55), 
+              label: baseTire.label
+            };
+          },
+          getDrivetrainProps: function() {
+            const drivetrainProperties = {
+              'fwd': { acceleration: 1.0, traction: 1.0, speedMod: 1.0, label: 'FWD' },
+              'rwd': { acceleration: 1.1, traction: 0.85, speedMod: 1.05, label: 'RWD' },
+              'awd': { acceleration: 1.15, traction: 1.0, speedMod: 1.0, label: 'AWD' },
+              '4wd': { acceleration: 1.0, traction: 1.1, speedMod: 0.95, label: '4WD' }
+            };
+            return drivetrainProperties[this.drivetrain] || drivetrainProperties['fwd'];
+          },
+          getSurfaceProps: function() {
+            const surfaceProperties = {
+              'asphalt': {
+                frictionCoeff: 1.0,
+                turningMod: 1.0,
+                driftMod: 1.0,
+                speedMod: 1.0,
+                rollingResistance: 0.015,
+                brakingMod: 1.0,
+                turningDrag: 1.0,
+                color: '#333333',
+                label: 'Asphalt'
+              },
+              'concrete': {
+                frictionCoeff: 0.92,
+                turningMod: 0.97,
+                driftMod: 1.15,
+                speedMod: 0.98,
+                rollingResistance: 0.018,
+                brakingMod: 0.95,
+                turningDrag: 1.08,
+                color: '#555555',
+                label: 'Concrete'
+              },
+              'unpaved': {
+                frictionCoeff: 0.68,
+                turningMod: 0.78,
+                driftMod: 2.2,
+                speedMod: 0.82,
+                rollingResistance: 0.045,
+                brakingMod: 0.75,
+                turningDrag: 1.35,
+                color: '#8B7355',
+                label: 'Unpaved'
+              }
+            };
+            return surfaceProperties[this.surface] || surfaceProperties['asphalt'];
+          },
+          updateSpeedometer: function() {
+            const speedValue = document.getElementById('speedValue');
+            const speedBarFill = document.getElementById('speedBarFill');
+            
+            if (speedValue && speedBarFill) {
+              const displaySpeed = Math.round(this.displaySpeed);
+              speedValue.textContent = displaySpeed;
+              
+              const percentage = Math.min((this.displaySpeed / 120) * 100, 100);
+              speedBarFill.style.width = percentage + '%';
+            }
+          },
+          updateWheelColors: function() {
+            const el = this.el;
+            
+            const allCylinders = el.querySelectorAll('a-cylinder.wheel');
+            
+            allCylinders.forEach(cyl => {
+              const classList = cyl.getAttribute('class') || '';
+              const isFront = classList.includes('wheel-front');
+              const isRear = classList.includes('wheel-back');
+              
+              cyl.setAttribute('color', '#1a1a1a');
+              
+              if (this.drivetrain === 'fwd' && isFront) {
+                cyl.setAttribute('color', '#ff0000');
+              } else if (this.drivetrain === 'rwd' && isRear) {
+                cyl.setAttribute('color', '#ff0000');
+              } else if (this.drivetrain === 'awd' || this.drivetrain === '4wd') {
+                cyl.setAttribute('color', '#ff0000');
+              }
+            });
+          },
+          setVehicleProperties: function() {
+            const vehicleId = this.el.id;
+            
+            if (vehicleId === 'sedan') {
+              this.dragCoefficient = 0.28;
+              this.weight = 3500;
+            } else if (vehicleId === 'suv') {
+              this.dragCoefficient = 0.38;
+              this.weight = 4800;
+            } else if (vehicleId === 'truck') {
+              this.dragCoefficient = 0.43;
+              this.weight = 5500;
+            }
+            
+            this.updateStatsDisplay();
+          },
+          updateStatsDisplay: function() {
+            const dragCoeffEl = document.getElementById('dragCoeff');
+            const frictionEl = document.getElementById('frictionValue');
+            const drivetrainEl = document.getElementById('drivetrainDisplay');
+            const tiresEl = document.getElementById('tiresDisplay');
+            const surfaceEl = document.getElementById('surfaceDisplay');
+            const tireAgeEl = document.getElementById('tireAgeValue');
+            const tireAgeSlider = document.getElementById('tireAgeSlider');
+            
+            if (dragCoeffEl) {
+              dragCoeffEl.textContent = this.dragCoefficient.toFixed(2);
+            }
+            
+            if (frictionEl) {
+              const tireGrip = this.getTireGrip();
+              const surfaceProps = this.getSurfaceProps();
+              const totalGrip = tireGrip.traction * surfaceProps.frictionCoeff;
+              frictionEl.textContent = totalGrip.toFixed(2);
+
+              if (totalGrip >= 0.90) {
+                frictionEl.className = 'stat-value';
+              } else if (totalGrip >= 0.70) {
+                frictionEl.className = 'stat-value warning';
+              } else {
+                frictionEl.className = 'stat-value critical';
+              }
+            }
+            
+            if (drivetrainEl) {
+              drivetrainEl.value = this.drivetrain;
+            }
+            
+            if (tiresEl) {
+              tiresEl.value = this.tires;
+            }
+            
+            if (surfaceEl) {
+              surfaceEl.value = this.surface;
+            }
+            
+            if (tireAgeEl) {
+              tireAgeEl.textContent = this.tireAge.toFixed(1) + ' yrs';
+              
+              if (this.tireAge <= 3) {
+                tireAgeEl.className = 'stat-value';
+              } else if (this.tireAge <= 6) {
+                tireAgeEl.className = 'stat-value warning';
+              } else {
+                tireAgeEl.className = 'stat-value critical';
+              }
+            }
+            
+            if (tireAgeSlider) {
+              tireAgeSlider.value = this.tireAge;
+            }
+          }
+        });
+        
+        function switchCar(carType) {
+          let currentDrivetrain = 'fwd';
+          let currentTires = 'all-season';
+          let currentSurface = 'asphalt';
+          let currentTireAge = 0;
+          
+          document.querySelectorAll('.car-model').forEach(car => {
+            const component = car.components['car-controls'];
+            if (component && car.getAttribute('visible')) {
+              currentDrivetrain = component.drivetrain;
+              currentTires = component.tires;
+              currentSurface = component.surface;
+              currentTireAge = component.tireAge;
+            }
+            car.setAttribute('visible', 'false');
+          });
+          
+          const newCar = document.getElementById(carType);
+          newCar.setAttribute('visible', 'true');
+          
+          setTimeout(() => {
+            const component = newCar.components['car-controls'];
+            if (component) {
+              component.drivetrain = currentDrivetrain;
+              component.tires = currentTires;
+              component.surface = currentSurface;
+              component.tireAge = currentTireAge;
+              component.updateWheelColors();
+              component.setVehicleProperties();
+              window.currentCar = component;
+            }
+          }, 100);
+          
+          document.querySelectorAll('.car-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          event.target.classList.add('active');
+        }
+        
+        function setDrivetrain(type) {
+          document.querySelectorAll('.car-model').forEach(car => {
+            const component = car.components['car-controls'];
+            if (component) {
+              component.drivetrain = type;
+              component.updateWheelColors();
+              component.updateStatsDisplay();
+            }
+          });
+        }
+        
+        function setTires(type) {
+          document.querySelectorAll('.car-model').forEach(car => {
+            const component = car.components['car-controls'];
+            if (component) {
+              component.tires = type;
+              component.updateStatsDisplay();
+            }
+          });
+        }
+        
+        function setSurface(type) {
+          document.querySelectorAll('.car-model').forEach(car => {
+            const component = car.components['car-controls'];
+            if (component) {
+              component.surface = type;
+              component.updateStatsDisplay();
+            }
+          });
+          
+          const surfaceProps = {
+            'asphalt': '#333333',
+            'concrete': '#555555',
+            'unpaved': '#8B7355'
+          };
+          
+          const roadColor = surfaceProps[type] || '#333333';
+          document.getElementById('road1').setAttribute('color', roadColor);
+          document.getElementById('road2').setAttribute('color', roadColor);
+          document.getElementById('road3').setAttribute('color', roadColor);
+        }
+        
+        function setTireAge(age) {
+          const ageFloat = parseFloat(age);
+          document.querySelectorAll('.car-model').forEach(car => {
+            const component = car.components['car-controls'];
+            if (component) {
+              component.tireAge = ageFloat;
+              component.updateStatsDisplay();
+            }
+          });
+        }
+        
+        window.switchCar = switchCar;
+        window.setDrivetrain = setDrivetrain;
+        window.setTires = setTires;
+        window.setSurface = setSurface;
+        window.setTireAge = setTireAge;
+      </script>
+    </a-scene>
+  </body>
+</html>
